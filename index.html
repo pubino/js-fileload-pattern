@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSV Load Demo</title>
+  </head>
+  <body>
+    <h1>CSV Load Demo</h1>
+
+    <!-- Button to choose a CSV file -->
+    <input id="fileInput" type="file" accept=".csv" />
+    <button id="loadBtn" disabled>Load selected CSV (async)</button>
+    <button id="showBtn" disabled>Show loaded CSV (sync)</button>
+
+    <pre id="output" aria-live="polite"></pre>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>
