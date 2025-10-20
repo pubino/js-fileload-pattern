@@ -4,6 +4,13 @@ This repository contains a minimal demo that shows two small, contrasting browse
 
 - Proper page: reads the file asynchronously, stores the contents in memory, and shows the contents synchronously when the user clicks a display button. This avoids popup-blocker issues.
 - Malformed page: demonstrates the anti-pattern of calling window.open from an asynchronous continuation (after the file read completes). Browsers often block that as a popup.
+ 
+ (Quick links)
+
+- Proper demo: `index.html`
+- Malformed demo: `malformed.html`
+- Single-file Proper demo: `index.inline.html`
+- Single-file Malformed demo: `malformed.inline.html`
 
 ## How to try the demo locally
 
@@ -49,6 +56,17 @@ The Malformed page intentionally shows that timing matters: calling `window.open
 - `tests/run-tests.js` — A small Playwright-based CLI test harness that exercises both pages and asserts the expected outcomes (notes below about popup blockers in headless browsers).
 - `package.json` — Includes a `test` script to run the CLI tests.
 - `.github/workflows/gh-pages.yml` — (present in the repo) previously used for demonstration-only GitHub Pages publishing — removed from instructions below.
+- `README.md` — This file.
+- `index.html` — The Proper demo page. Minimal UI for selecting and loading a CSV and then showing it synchronously. (link: ./index.html)
+- `malformed.html` — The Malformed demo page. Minimal UI that attempts to open a popup after async I/O to illustrate popup-blocker behavior. (link: ./malformed.html)
+- `index.inline.html` — Single-file copy of the Proper demo (JS inlined) suitable for download and offline inspection. (link: ./index.inline.html)
+- `malformed.inline.html` — Single-file copy of the Malformed demo (JS inlined) suitable for download and offline inspection. (link: ./malformed.inline.html)
+- `js/main.js` — JavaScript for the Proper page. Handles file selection, asynchronous read, stores the result in memory, and exposes a synchronous display action. (link: ./js/main.js)
+- `js/malformed.js` — JavaScript for the Malformed page. Handles file selection, asynchronous read, and intentionally attempts `window.open` from the async continuation; it exposes flags (`window.__popupAttempted`, `window.__popupOpened`) for automated tests. (link: ./js/malformed.js)
+- `sample.csv` — A tiny sample CSV used by the automated tests. (link: ./sample.csv)
+- `tests/run-tests.js` — A small Playwright-based CLI test harness that exercises both pages and asserts the expected outcomes (notes below about popup blockers in headless browsers). (link: ./tests/run-tests.js)
+- `package.json` — Includes a `test` script to run the CLI tests. (link: ./package.json)
+- `.github/workflows/gh-pages.yml` — (present in the repo) previously used for demonstration-only GitHub Pages publishing — removed from instructions below. (link: ./.github/workflows/gh-pages.yml)
 - `README.md` — This file.
 
 ## Tests (CLI)

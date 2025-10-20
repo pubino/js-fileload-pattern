@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSV Load Demo — Proper (single-file)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;margin:20px}button{margin:6px 0}</style>
+  </head>
+  <body data-demo="proper">
+    <h1>CSV Load Demo — Proper (single-file)</h1>
+
+    <p>
+      This single-file copy of the proper demo has the JavaScript inlined so you can
+      download one HTML file and inspect or run it locally without separate assets.
+    </p>
+
+  <input id="fileInput" type="file" accept=".csv" />
+  <button id="loadBtn" disabled>Load selected CSV (async)</button>
+  <button id="showBtn" disabled>Show loaded CSV (sync)</button>
+
+    <p><a href="malformed.inline.html">Open the malformed single-file demo</a></p>
+
+    <pre id="output" aria-live="polite"></pre>
+
+    <script>
+    // main.js — inlined Proper demo logic
+    (function () {
+      const $ = id => document.getElementById(id);
+      const setOutput = msg => { const o = $('output'); if (o) o.textContent = msg; };
+
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error || new Error('File read error'));
+          reader.readAsText(file);
+        });
+      }
+
+      function initProperPage() {
+        const fileInput = $('fileInput');
+        const loadBtn = $('loadBtn');
+        const showBtn = $('showBtn');
+
+        if (!fileInput) return;
+
+        let loadedText = null;
+
+        fileInput.addEventListener('change', () => {
+          const has = fileInput.files && fileInput.files.length > 0;
+          if (loadBtn) loadBtn.disabled = !has;
+          if (showBtn) showBtn.disabled = true;
+          setOutput('');
+          loadedText = null;
+        });
+
+        if (loadBtn) {
+          loadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            loadBtn.disabled = true;
+            setOutput('Loading...');
+            try {
+              loadedText = await readFileAsText(file);
+              window.__properLoaded = true;
+              setOutput('File loaded into memory. Click "Show loaded CSV (sync)" to display.');
+              if (showBtn) showBtn.disabled = false;
+            } catch (err) {
+              setOutput('Error loading file: ' + err);
+            } finally {
+              loadBtn.disabled = false;
+            }
+          });
+        }
+
+        if (showBtn) {
+          showBtn.addEventListener('click', () => {
+            if (!loadedText) { setOutput('No file loaded yet.'); return; }
+            setOutput(loadedText);
+          });
+        }
+      }
+
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initProperPage);
+      else initProperPage();
+
+    })();
+    </script>
+  </body>
+</html>

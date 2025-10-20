@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSV Load Demo — Malformed (single-file)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;margin:20px}button{margin:6px 0}</style>
+  </head>
+  <body data-demo="malformed">
+    <h1>CSV Load Demo — Malformed (single-file)</h1>
+
+    <p>
+      This single-file copy of the malformed demo inlines the JavaScript and will
+      attempt to open a popup from the async callback after reading a file. Browsers
+      will usually block that attempt — that's the point of this demo.
+    </p>
+
+  <input id="fileInput" type="file" accept=".csv" />
+  <button id="loadBtn" disabled>Load selected CSV (async, will try popup)</button>
+
+    <p><a href="index.inline.html">Open the proper single-file demo</a></p>
+
+    <pre id="output" aria-live="polite"></pre>
+
+    <script>
+    // malformed.js — inlined Malformed demo logic
+    (function () {
+      const $ = id => document.getElementById(id);
+      const setOutput = msg => { const o = $('output'); if (o) o.textContent = msg; };
+
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error || new Error('File read error'));
+          reader.readAsText(file);
+        });
+      }
+
+      function initMalformedPage() {
+        const fileInput = $('fileInput');
+        const loadBtn = $('loadBtn');
+
+        if (!fileInput) return;
+
+        fileInput.addEventListener('change', () => {
+          const has = fileInput.files && fileInput.files.length > 0;
+          if (loadBtn) loadBtn.disabled = !has;
+          setOutput('');
+        });
+
+        if (loadBtn) {
+          loadBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            loadBtn.disabled = true;
+            setOutput('Loading (malformed will try popup from async callback)...');
+            try {
+              const text = await readFileAsText(file);
+
+              setOutput('File read complete. Now attempting popup from async callback...');
+              console.info('Malformed demo: file read complete — attempting window.open from async continuation');
+
+              window.__popupAttempted = true;
+              let popupOpened = false;
+              const popup = window.open('', '_blank', 'noopener');
+              if (!popup) {
+                setOutput('Popup attempt was blocked by the browser (expected for this malformed example).');
+                console.warn('Malformed demo: window.open returned null (popup blocked)');
+                popupOpened = false;
+              } else {
+                popup.document.title = 'CSV (malformed)';
+                popup.document.body.textContent = text;
+                setOutput('Loaded and opened popup (browser allowed it).');
+                console.info('Malformed demo: popup opened and content written');
+                popupOpened = true;
+              }
+              window.__popupOpened = popupOpened;
+            } catch (err) {
+              setOutput('Error: ' + err);
+            } finally {
+              loadBtn.disabled = false;
+            }
+          });
+        }
+      }
+
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMalformedPage);
+      else initMalformedPage();
+
+    })();
+    </script>
+  </body>
+</html>
