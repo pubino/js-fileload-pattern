@@ -42,26 +42,21 @@
         try {
           const text = await readFileAsText(file);
 
-          // IMPORTANT: the following call to window.open runs in the async
-          // continuation after a Promise resolves / FileReader `load` event.
-          // That means it's executed outside the original click handler's
-          // synchronous call stack. Browsers track whether an action is the
-          // direct result of a user gesture; if it's not, they may block
-          // window.open as a popup. That's exactly what this demo is
-          // demonstrating.
+          // Clear any previous message and announce the specific malformed flow.
+          setOutput('File read complete. Now attempting popup from async callback...');
+          console.info('Malformed demo: file read complete — attempting window.open from async continuation');
 
-          // Make the attempt explicit (and visible) so the UI shows that we
-          // tried to open a popup even when the browser blocks it. Also log
-          // to the console for developer inspection.
-          setOutput('Attempting popup from async callback...');
-          console.debug('Malformed demo: calling window.open from async continuation');
+          // Attempt popup (this is the action most browsers will block)
           const popup = window.open('', '_blank', 'noopener');
           if (!popup) {
-            setOutput('Popup was blocked (expected).');
+            // Make it explicit in the UI that the popup attempt occurred but was blocked.
+            setOutput('Popup attempt was blocked by the browser (expected for this malformed example).');
+            console.warn('Malformed demo: window.open returned null (popup blocked)');
           } else {
             popup.document.title = 'CSV (malformed)';
             popup.document.body.textContent = text;
             setOutput('Loaded and opened popup (browser allowed it).');
+            console.info('Malformed demo: popup opened and content written');
           }
         } catch (err) {
           setOutput('Error: ' + err);
