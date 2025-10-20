@@ -1,9 +1,17 @@
-// JS for the malformed demo page only
+// malformed.js — Malformed demo logic
+//
+// This file intentionally demonstrates the anti-pattern: it waits for an
+// asynchronous file read to complete and then calls `window.open` from the
+// async continuation. Most browsers consider such calls to be non-user-initiated
+// and will block them as popups. The purpose is to show that the timing and
+// placement of `window.open` relative to the user gesture matters.
 
 (function () {
   const $ = id => document.getElementById(id);
   const setOutput = msg => { const o = $('output'); if (o) o.textContent = msg; };
 
+  // Same FileReader helper as the proper demo — the difference is what we do
+  // after the read completes.
   function readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -34,9 +42,13 @@
         try {
           const text = await readFileAsText(file);
 
-          // MALFORMED: open popup now from the async continuation — browsers will
-          // typically block this because it's no longer part of the original
-          // user gesture.
+          // IMPORTANT: the following call to window.open runs in the async
+          // continuation after a Promise resolves / FileReader `load` event.
+          // That means it's executed outside the original click handler's
+          // synchronous call stack. Browsers track whether an action is the
+          // direct result of a user gesture; if it's not, they may block
+          // window.open as a popup. That's exactly what this demo is
+          // demonstrating.
           const popup = window.open('', '_blank', 'noopener');
           if (!popup) {
             setOutput('Popup was blocked (expected).');
