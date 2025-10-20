@@ -3,6 +3,7 @@
 const fileInput = document.getElementById('fileInput');
 const loadBtn = document.getElementById('loadBtn');
 const showBtn = document.getElementById('showBtn');
+const popupTryBtn = document.getElementById('popupTryBtn');
 const output = document.getElementById('output');
 
 // In-memory storage for loaded file text
@@ -26,6 +27,8 @@ loadBtn.addEventListener('click', async () => {
     loadedText = await readFileAsText(file);
     output.textContent = 'File loaded successfully. Click "Show loaded CSV (sync)" to display contents.';
     showBtn.disabled = false;
+    // Enable the malformed popup try button too
+    popupTryBtn.disabled = false;
   } catch (err) {
     output.textContent = 'Error loading file: ' + err;
   } finally {
@@ -42,6 +45,31 @@ showBtn.addEventListener('click', () => {
 
   // For this demo, just display the raw CSV text synchronously
   output.textContent = loadedText;
+});
+
+// Malformed variant: attempt to open a popup after async I/O
+// Many browsers will treat this as a popup that wasn't triggered directly by a user gesture and block it.
+popupTryBtn.addEventListener('click', () => {
+  if (loadedText === null) {
+    output.textContent = 'No file loaded yet.';
+    return;
+  }
+
+  output.textContent = 'Attempting to open a popup with CSV contents... (this may be blocked)';
+
+  // BAD: open a window after the async load. If the browser requires the open to be in the same
+  // user gesture as the click (it usually does), this will be blocked.
+  // We intentionally do it *after* a timeout to simulate a delayed async continuation.
+  setTimeout(() => {
+    // This will often be blocked by the browser popup blocker since it's not in the immediate
+    // click handler call stack.
+    const w = window.open('', '_blank', 'noopener');
+    if (!w) {
+      output.textContent += '\nPopup was blocked by the browser.';
+      return;
+    }
+    w.document.body.textContent = loadedText;
+  }, 50);
 });
 
 // Helper: returns a Promise that resolves with file text via FileReader

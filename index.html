@@ -11,6 +11,8 @@
     <input id="fileInput" type="file" accept=".csv" />
     <button id="loadBtn" disabled>Load selected CSV (async)</button>
     <button id="showBtn" disabled>Show loaded CSV (sync)</button>
+  <!-- Malformed demo: attempt to open popup after async I/O (likely blocked by browsers) -->
+  <button id="popupTryBtn" disabled>Try opening popup after async load (malformed)</button>
 
     <pre id="output" aria-live="polite"></pre>
 

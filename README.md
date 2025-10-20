@@ -60,3 +60,14 @@ python3 -m http.server 8000
 # then open http://localhost:8000 in your browser
 ```
 
+Malformed popup-try variant
+---------------------------
+
+This repository also includes a deliberately malformed variant of the demo. The UI has a button labeled "Try opening popup after async load (malformed)" which attempts to open a new window after an asynchronous I/O has completed. Modern browsers typically allow popups only when they are opened directly inside a user gesture (for example, during the immediate execution of a click handler). If you try to open a popup from a callback that runs later (for example inside a setTimeout or after an async event/microtask), the browser will usually block it as a popup.
+
+Why this matters:
+- Popup blockers detect whether a window.open call is within the same user gesture. If not, they block the new window.
+- The malformed demo shows this behavior: after the file is loaded the demo schedules a delayed window.open call; most browsers will block it and the page will display a message saying the popup was blocked.
+
+This is included purely for demonstration and learning; don't use this pattern in production.
+
