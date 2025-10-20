@@ -142,8 +142,14 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    initProperPage();
-    initMalformedPage();
+    const demo = document.body && document.body.getAttribute('data-demo');
+    if (demo === 'proper') initProperPage();
+    else if (demo === 'malformed') initMalformedPage();
+    else {
+      // Fallback: try to initialize both if not explicitly set
+      initProperPage();
+      initMalformedPage();
+    }
   });
 
 })();
