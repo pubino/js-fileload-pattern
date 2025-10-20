@@ -1,73 +1,93 @@
-CSV Load Demo
+# JavaScript File Load Pattern Demo
 
-This is a minimal demo that shows an asynchronous file load (using FileReader) and a separate synchronous step to display the loaded contents.
+This repository contains a minimal demo that shows two small, contrasting browser patterns for loading a CSV file from the user's machine and presenting the result:
 
-Files:
-- index.html: the HTML UI with file input and two buttons
-- js/main.js: JavaScript logic (async load + sync display)
+- Proper page: reads the file asynchronously, stores the contents in memory, and shows the contents synchronously when the user clicks a display button. This avoids popup-blocker issues.
+- Malformed page: demonstrates the anti-pattern of calling window.open from an asynchronous continuation (after the file read completes). Browsers often block that as a popup.
 
-How to use:
-1. Open `index.html` in a browser (double-click or serve from a simple HTTP server).
-2. Click the file chooser and pick a `.csv` file from your machine.
-3. Click "Load selected CSV (async)" — this reads the file asynchronously.
-4. After the success message, click "Show loaded CSV (sync)" to display the raw CSV contents.
+## How to try the demo locally
 
-Notes:
-- No CSS included. This is intentionally bare-bones.
-- The demo uses the browser File API and doesn't upload files anywhere.
-
-Explanation: microtask vs macrotask in this demo
-------------------------------------------------
-
-Short answer: the underlying file-read completion is delivered as a macrotask (a normal event/task). However, because this demo wraps the FileReader callback in a Promise, the Promise resolution causes the async/await continuation to run via the microtask queue.
-
-More detail:
-- When you call `reader.readAsText(file)` the browser performs the file I/O asynchronously.
-- When the read finishes the browser dispatches a `load` event (the `onload` callback) as an event loop task — commonly referred to as a macrotask.
-- In `js/main.js` the `onload` handler calls `resolve(reader.result)` which resolves the Promise returned by `readFileAsText`.
-- Resolving a Promise schedules the Promise reactions (the code after `await`) as microtasks. That means the `await readFileAsText(file)` will resume on the microtask queue immediately after the current macrotask yields.
-
-So: the I/O completion itself is a macrotask, and the Promise-based continuation runs as a microtask. For most apps the difference is subtle, but it's useful to know: microtasks run before the next rendering/macro task, so the `await` continuation will run quickly after the `onload` handler resolves the Promise.
-
-CI / GitHub Pages deployment
-----------------------------
-
-This repo includes a GitHub Actions workflow at `.github/workflows/gh-pages.yml` that publishes the repository content to GitHub Pages whenever you push to the `main` branch. The workflow uses the `peaceiris/actions-gh-pages` action and the repository's built-in `GITHUB_TOKEN`, so no additional secrets are required for basic use.
-
-How to publish to GitHub Pages from this local repo:
-
-1. Create a new repository on GitHub (for example `username/js-fileload-pattern`).
-2. Add the remote and push:
-
-```bash
-git remote add origin git@github.com:<your-username>/<your-repo>.git
-git push -u origin main
-```
-
-3. After the push the GitHub Actions workflow will run and publish the site to GitHub Pages. By default the action will publish the repository root. In GitHub repository Settings → Pages you can confirm the published site URL.
-
-Notes:
-- The workflow publishes the repository contents as-is (no build step). If you later add a build step (for example a bundler or static-site generator) update `publish_dir` in the workflow accordingly.
-- GitHub Pages publishing will only occur after you push this repo to GitHub; the CI file in the local workspace does not itself publish until it's on GitHub.
-
-Local testing
--------------
-
-If you want to test locally without pushing, run a small HTTP server from the project folder (recommended to avoid certain browser file:// restrictions):
+Run a tiny static server from the project folder and open the pages in your browser:
 
 ```bash
 python3 -m http.server 8000
-# then open http://localhost:8000 in your browser
+# then open http://localhost:8000/index.html (proper) and
+# open http://localhost:8000/malformed.html (malformed)
 ```
 
-Malformed popup-try variant
----------------------------
+No CSS or external build steps are required — the demo uses plain HTML and vanilla JavaScript.
 
-This repository also includes a deliberately malformed variant of the demo. The UI has a button labeled "Try opening popup after async load (malformed)" which attempts to open a new window after an asynchronous I/O has completed. Modern browsers typically allow popups only when they are opened directly inside a user gesture (for example, during the immediate execution of a click handler). If you try to open a popup from a callback that runs later (for example inside a setTimeout or after an async event/microtask), the browser will usually block it as a popup.
+## What each page demonstrates
 
-Why this matters:
-- Popup blockers detect whether a window.open call is within the same user gesture. If not, they block the new window.
-- The malformed demo shows this behavior: after the file is loaded the demo schedules a delayed window.open call; most browsers will block it and the page will display a message saying the popup was blocked.
+### Proper
 
-This is included purely for demonstration and learning; don't use this pattern in production.
+The Proper page (`index.html`) demonstrates a safe pattern:
+
+- The user selects a CSV file and clicks "Load selected CSV (async)".
+- The file is read asynchronously using the FileReader API and held in memory.
+- The user then clicks "Show loaded CSV (sync)" to synchronously render the contents in-page.
+
+This flow never calls `window.open` from an async continuation, so popup blockers are not involved.
+
+### Malformed
+
+The Malformed page (`malformed.html`) demonstrates the anti-pattern:
+
+- The user selects a CSV file and clicks "Load selected CSV (async, will try popup)".
+- After the asynchronous read completes the page attempts to call `window.open` from the async continuation.
+- In most browsers that call is treated as not user-initiated and will be blocked by the popup blocker.
+
+The Malformed page intentionally shows that timing matters: calling `window.open` must happen synchronously as part of a user gesture if you want browsers to allow it.
+
+## Files and their purpose
+
+- `index.html` — The Proper demo page. Minimal UI for selecting and loading a CSV and then showing it synchronously.
+- `malformed.html` — The Malformed demo page. Minimal UI that attempts to open a popup after async I/O to illustrate popup-blocker behavior.
+- `js/main.js` — JavaScript for the Proper page. Handles file selection, asynchronous read, stores the result in memory, and exposes a synchronous display action.
+- `js/malformed.js` — JavaScript for the Malformed page. Handles file selection, asynchronous read, and intentionally attempts `window.open` from the async continuation; it exposes flags (`window.__popupAttempted`, `window.__popupOpened`) for automated tests.
+- `sample.csv` — A tiny sample CSV used by the automated tests.
+- `tests/run-tests.js` — A small Playwright-based CLI test harness that exercises both pages and asserts the expected outcomes (notes below about popup blockers in headless browsers).
+- `package.json` — Includes a `test` script to run the CLI tests.
+- `.github/workflows/gh-pages.yml` — (present in the repo) previously used for demonstration-only GitHub Pages publishing — removed from instructions below.
+- `README.md` — This file.
+
+## Tests (CLI)
+
+There is a small, optional CLI test harness based on Playwright. It performs these checks:
+
+- Proper page: the test uploads `sample.csv`, clicks the load button, and asserts that the page sets `window.__properLoaded === true` (indicating the user can complete the data load).
+- Malformed page: the test uploads `sample.csv`, clicks the load button, and asserts that the page attempted a popup (`window.__popupAttempted === true`) and that the popup was not opened (`window.__popupOpened === false`), which we treat as a PASS for the malformed demo (it shows the browser correctly blocked the popup).
+
+To run the tests locally:
+
+1. Install dev dependencies:
+
+```bash
+npm install
+npx playwright install --with-deps
+```
+
+2. Run the test script:
+
+```bash
+npm test
+```
+
+Notes about CI and headless environments
+
+Popup-blocker behavior varies across browsers and environments. Headless browsers or CI runners may not emulate popup blockers the same way as a full desktop browser. The test harness attempts to detect the popup attempt and whether it was opened using in-page flags, but results in CI may differ from a desktop test.
+
+## Guidance on production use
+
+Both pages are educational. The Proper pattern shown in `index.html` is a safe, production-appropriate approach for reading local files and displaying them in-page: perform asynchronous I/O, store results, and use synchronous user-initiated actions to present data.
+
+The Malformed pattern (calling `window.open` from an async continuation) is fragile and should be avoided in production. If you must open a new window as part of a user flow, open a placeholder window synchronously inside the user gesture and then populate it after the async work completes.
+
+## GitHub Pages demo
+
+If you pushed this repository to GitHub under the `pubino/js-fileload-pattern` repository and enabled GitHub Pages, the demo site may be available at:
+
+https://pubino.github.io/js-fileload-pattern/
+
+If you want me to add instructions for automated GitHub Actions testing or to publish the site under a specific Pages configuration, tell me which option you prefer and I will update the repo accordingly.
 
