@@ -1,11 +1,9 @@
-// Shared JS for both the proper and malformed demo pages
+// JS for the malformed demo page only
 
 (function () {
-  // Minimal helper functions
   const $ = id => document.getElementById(id);
   const setOutput = msg => { const o = $('output'); if (o) o.textContent = msg; };
 
-  // Simple FileReader wrapped in a Promise
   function readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -15,22 +13,16 @@
     });
   }
 
-  // Proper page: open popup synchronously then fill it after async I/O
-  function initProperPage() {
+  function initMalformedPage() {
     const fileInput = $('fileInput');
     const loadBtn = $('loadBtn');
-    const showBtn = $('showBtn');
 
     if (!fileInput) return;
-
-    let loadedText = null;
 
     fileInput.addEventListener('change', () => {
       const has = fileInput.files && fileInput.files.length > 0;
       if (loadBtn) loadBtn.disabled = !has;
-      if (showBtn) showBtn.disabled = true;
       setOutput('');
-      loadedText = null;
     });
 
     if (loadBtn) {
@@ -38,27 +30,30 @@
         const file = fileInput.files[0];
         if (!file) return;
         loadBtn.disabled = true;
-        setOutput('Loading...');
+        setOutput('Loading (malformed will try popup from async callback)...');
         try {
-          loadedText = await readFileAsText(file);
-          setOutput('File loaded into memory. Click "Show loaded CSV (sync)" to display.');
-          if (showBtn) showBtn.disabled = false;
+          const text = await readFileAsText(file);
+
+          // MALFORMED: open popup now from the async continuation — browsers will
+          // typically block this because it's no longer part of the original
+          // user gesture.
+          const popup = window.open('', '_blank', 'noopener');
+          if (!popup) {
+            setOutput('Popup was blocked (expected).');
+          } else {
+            popup.document.title = 'CSV (malformed)';
+            popup.document.body.textContent = text;
+            setOutput('Loaded and opened popup (browser allowed it).');
+          }
         } catch (err) {
-          setOutput('Error loading file: ' + err);
+          setOutput('Error: ' + err);
         } finally {
           loadBtn.disabled = false;
         }
       });
     }
-
-    if (showBtn) {
-      showBtn.addEventListener('click', () => {
-        if (!loadedText) { setOutput('No file loaded yet.'); return; }
-        setOutput(loadedText);
-      });
-    }
   }
 
-  document.addEventListener('DOMContentLoaded', initProperPage);
+  document.addEventListener('DOMContentLoaded', initMalformedPage);
 
 })();
