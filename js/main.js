@@ -59,6 +59,9 @@
           // At this point the read completion happened asynchronously. We
           // intentionally don't call `window.open` here — instead we enable a
           // synchronous, user-triggered action to display the text.
+          // Expose a test flag so automated tests can detect that the proper
+          // page successfully loaded the data into memory.
+          window.__properLoaded = true;
           setOutput('File loaded into memory. Click "Show loaded CSV (sync)" to display.');
           if (showBtn) showBtn.disabled = false;
         } catch (err) {

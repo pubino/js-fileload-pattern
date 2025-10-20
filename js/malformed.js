@@ -47,17 +47,24 @@
           console.info('Malformed demo: file read complete — attempting window.open from async continuation');
 
           // Attempt popup (this is the action most browsers will block)
+          // Expose explicit flags on window so automated tests can assert the
+          // behavior deterministically (popupAttempted and popupOpened).
+          window.__popupAttempted = true;
+          let popupOpened = false;
           const popup = window.open('', '_blank', 'noopener');
           if (!popup) {
-            // Make it explicit in the UI that the popup attempt occurred but was blocked.
             setOutput('Popup attempt was blocked by the browser (expected for this malformed example).');
             console.warn('Malformed demo: window.open returned null (popup blocked)');
+            popupOpened = false;
           } else {
             popup.document.title = 'CSV (malformed)';
             popup.document.body.textContent = text;
             setOutput('Loaded and opened popup (browser allowed it).');
             console.info('Malformed demo: popup opened and content written');
+            popupOpened = true;
           }
+          // Expose the result for tests
+          window.__popupOpened = popupOpened;
         } catch (err) {
           setOutput('Error: ' + err);
         } finally {

@@ -1,0 +1,12 @@
+{
+  "name": "js-fileload-pattern",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/run-tests.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0",
+    "http-server": "^14.1.1"
+  }
+}
