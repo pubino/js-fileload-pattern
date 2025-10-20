@@ -49,6 +49,12 @@
           // direct result of a user gesture; if it's not, they may block
           // window.open as a popup. That's exactly what this demo is
           // demonstrating.
+
+          // Make the attempt explicit (and visible) so the UI shows that we
+          // tried to open a popup even when the browser blocks it. Also log
+          // to the console for developer inspection.
+          setOutput('Attempting popup from async callback...');
+          console.debug('Malformed demo: calling window.open from async continuation');
           const popup = window.open('', '_blank', 'noopener');
           if (!popup) {
             setOutput('Popup was blocked (expected).');
