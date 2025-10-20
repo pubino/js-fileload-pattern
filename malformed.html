@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSV Load Demo — Malformed (popup blocked)</title>
+  </head>
+  <body>
+    <h1>CSV Load Demo — Malformed</h1>
+
+    <p>
+      This page demonstrates the malformed approach: the code attempts to call window.open
+      from the async completion callback (FileReader onload). Browsers usually block that.
+    </p>
+
+    <input id="fileInput" type="file" accept=".csv" />
+    <!-- On this page, Load will attempt to open a popup from the async callback -->
+    <button id="loadBtn" disabled>Load selected CSV (async, will try popup)</button>
+    <button id="showBtn" disabled>Show loaded CSV (sync)</button>
+
+    <p><a href="index.html">Go to proper variant</a></p>
+
+    <pre id="output" aria-live="polite"></pre>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>

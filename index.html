@@ -2,17 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>CSV Load Demo</title>
+    <title>CSV Load Demo — Proper</title>
   </head>
   <body>
-    <h1>CSV Load Demo</h1>
+    <h1>CSV Load Demo — Proper</h1>
 
-    <!-- Button to choose a CSV file -->
+    <p>
+      This page demonstrates the correct pattern: open a popup synchronously on a user action
+      (placeholder window), then fill it after async I/O completes. This preserves the user
+      gesture so browsers don't block the popup.
+    </p>
+
     <input id="fileInput" type="file" accept=".csv" />
     <button id="loadBtn" disabled>Load selected CSV (async)</button>
     <button id="showBtn" disabled>Show loaded CSV (sync)</button>
-  <!-- Malformed demo: attempt to open popup after async I/O (likely blocked by browsers) -->
-  <button id="popupTryBtn" disabled>Try opening popup after async load (malformed)</button>
+    <button id="openPopupCorrectBtn" disabled>Load and open popup (correct)</button>
+
+    <p><a href="malformed.html">Go to malformed variant (popup likely blocked)</a></p>
 
     <pre id="output" aria-live="polite"></pre>
 

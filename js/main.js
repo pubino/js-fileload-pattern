@@ -1,83 +1,149 @@
-// Bare-bones demo: load a CSV file asynchronously, then synchronously show its contents
+// Shared JS for both the proper and malformed demo pages
 
-const fileInput = document.getElementById('fileInput');
-const loadBtn = document.getElementById('loadBtn');
-const showBtn = document.getElementById('showBtn');
-const popupTryBtn = document.getElementById('popupTryBtn');
-const output = document.getElementById('output');
+(function () {
+  // Minimal helper functions
+  const $ = id => document.getElementById(id);
+  const setOutput = msg => { const o = $('output'); if (o) o.textContent = msg; };
 
-// In-memory storage for loaded file text
-let loadedText = null;
-
-// Enable load button when a file is selected
-fileInput.addEventListener('change', () => {
-  loadBtn.disabled = !fileInput.files.length;
-});
-
-// Asynchronous load using FileReader (reads file from user's machine)
-loadBtn.addEventListener('click', async () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  loadBtn.disabled = true;
-  showBtn.disabled = true;
-  output.textContent = 'Loading...';
-
-  try {
-    loadedText = await readFileAsText(file);
-    output.textContent = 'File loaded successfully. Click "Show loaded CSV (sync)" to display contents.';
-    showBtn.disabled = false;
-    // Enable the malformed popup try button too
-    popupTryBtn.disabled = false;
-  } catch (err) {
-    output.textContent = 'Error loading file: ' + err;
-  } finally {
-    loadBtn.disabled = false;
-  }
-});
-
-// Synchronous display of the already-loaded text
-showBtn.addEventListener('click', () => {
-  if (loadedText === null) {
-    output.textContent = 'No file loaded yet.';
-    return;
+  // Simple FileReader wrapped in a Promise
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('File read error'));
+      reader.readAsText(file);
+    });
   }
 
-  // For this demo, just display the raw CSV text synchronously
-  output.textContent = loadedText;
-});
+  // Proper page: open popup synchronously then fill it after async I/O
+  function initProperPage() {
+    const fileInput = $('fileInput');
+    const loadBtn = $('loadBtn');
+    const showBtn = $('showBtn');
+    const openPopupCorrectBtn = $('openPopupCorrectBtn');
 
-// Malformed variant: attempt to open a popup after async I/O
-// Many browsers will treat this as a popup that wasn't triggered directly by a user gesture and block it.
-popupTryBtn.addEventListener('click', () => {
-  if (loadedText === null) {
-    output.textContent = 'No file loaded yet.';
-    return;
-  }
+    if (!fileInput) return;
 
-  output.textContent = 'Attempting to open a popup with CSV contents... (this may be blocked)';
+    let loadedText = null;
 
-  // BAD: open a window after the async load. If the browser requires the open to be in the same
-  // user gesture as the click (it usually does), this will be blocked.
-  // We intentionally do it *after* a timeout to simulate a delayed async continuation.
-  setTimeout(() => {
-    // This will often be blocked by the browser popup blocker since it's not in the immediate
-    // click handler call stack.
-    const w = window.open('', '_blank', 'noopener');
-    if (!w) {
-      output.textContent += '\nPopup was blocked by the browser.';
-      return;
+    fileInput.addEventListener('change', () => {
+      const has = fileInput.files && fileInput.files.length > 0;
+      if (loadBtn) loadBtn.disabled = !has;
+      if (openPopupCorrectBtn) openPopupCorrectBtn.disabled = !has;
+      if (showBtn) showBtn.disabled = true;
+      setOutput('');
+      loadedText = null;
+    });
+
+    if (loadBtn) {
+      loadBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        loadBtn.disabled = true;
+        setOutput('Loading...');
+        try {
+          loadedText = await readFileAsText(file);
+          setOutput('File loaded into memory. Click "Show loaded CSV (sync)" to display.');
+          if (showBtn) showBtn.disabled = false;
+          if (openPopupCorrectBtn) openPopupCorrectBtn.disabled = false;
+        } catch (err) {
+          setOutput('Error loading file: ' + err);
+        } finally {
+          loadBtn.disabled = false;
+        }
+      });
     }
-    w.document.body.textContent = loadedText;
-  }, 50);
-});
 
-// Helper: returns a Promise that resolves with file text via FileReader
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file);
+    if (showBtn) {
+      showBtn.addEventListener('click', () => {
+        if (!loadedText) { setOutput('No file loaded yet.'); return; }
+        setOutput(loadedText);
+      });
+    }
+
+    if (openPopupCorrectBtn) {
+      // Correct pattern: open a placeholder popup immediately in the click handler
+      // so the browser considers it user-initiated.
+      openPopupCorrectBtn.addEventListener('click', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) { setOutput('No file selected'); return; }
+
+        const popup = window.open('', '_blank', 'noopener');
+        if (!popup) { setOutput('Popup blocked even when opened synchronously.'); return; }
+        popup.document.title = 'Loading CSV...';
+        popup.document.body.textContent = 'Loading...';
+
+        try {
+          const text = await readFileAsText(file);
+          popup.document.body.textContent = text;
+          setOutput('Loaded and written to popup.');
+        } catch (err) {
+          popup.document.body.textContent = 'Error: ' + err;
+          setOutput('Error reading file: ' + err);
+        }
+      });
+    }
+  }
+
+  // Malformed page: attempt to open popup from async callback (likely blocked)
+  function initMalformedPage() {
+    const fileInput = $('fileInput');
+    const loadBtn = $('loadBtn');
+    const showBtn = $('showBtn');
+
+    if (!fileInput) return;
+
+    let loadedText = null;
+
+    fileInput.addEventListener('change', () => {
+      const has = fileInput.files && fileInput.files.length > 0;
+      if (loadBtn) loadBtn.disabled = !has;
+      if (showBtn) showBtn.disabled = true;
+      setOutput('');
+      loadedText = null;
+    });
+
+    if (loadBtn) {
+      loadBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        loadBtn.disabled = true;
+        setOutput('Loading (malformed will try popup from async callback)...');
+        try {
+          const text = await readFileAsText(file);
+          loadedText = text;
+
+          // MALFORMED: open popup now from the async continuation — browsers will
+          // typically block this because it's no longer part of the original
+          // user gesture.
+          const popup = window.open('', '_blank', 'noopener');
+          if (!popup) {
+            setOutput('Popup was blocked (expected). Loaded in memory.');
+          } else {
+            popup.document.title = 'CSV (malformed)';
+            popup.document.body.textContent = loadedText;
+            setOutput('Loaded and opened popup (browser allowed it).');
+          }
+          if (showBtn) showBtn.disabled = false;
+        } catch (err) {
+          setOutput('Error: ' + err);
+        } finally {
+          loadBtn.disabled = false;
+        }
+      });
+    }
+
+    if (showBtn) {
+      showBtn.addEventListener('click', () => {
+        if (!loadedText) { setOutput('No data loaded'); return; }
+        setOutput(loadedText);
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initProperPage();
+    initMalformedPage();
   });
-}
+
+})();
